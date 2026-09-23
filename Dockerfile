@@ -27,7 +27,7 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # DATABASE_URL dummy supaya build tidak gagal saat evaluasi env (build tidak konek DB)
-ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV DATABASE_URL="mysql://build:build@localhost:3306/build"
 ENV AUTH_SECRET="build-dummy-auth-secret-1234567890"
 RUN npx prisma generate && npm run build
 
