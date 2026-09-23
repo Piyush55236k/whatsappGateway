@@ -49,8 +49,9 @@ if (process.env.NODE_ENV === "production") {
     };
 }
 
-const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "localhost";
+const isDev = process.env.npm_lifecycle_event === "dev" || (process.env.NODE_ENV === "development" && process.env.npm_lifecycle_event !== "start");
+const dev = isDev && process.env.NODE_ENV !== "production";
+const hostname = process.env.HOSTNAME || (dev ? "localhost" : "0.0.0.0");
 const port = parseInt(process.env.PORT || "3030", 10);
 
 const app = next({ dev, hostname, port });

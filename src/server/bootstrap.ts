@@ -38,6 +38,11 @@ function loadEnvFile(file: string) {
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
+// Set NODE_ENV to production if running start or if not dev
+if (process.env.npm_lifecycle_event === "start" || (!process.env.NODE_ENV && process.env.npm_lifecycle_event !== "dev")) {
+    (process.env as any).NODE_ENV = "production";
+}
+
 // Fallback DATABASE_URL untuk Railway / Render / cloud hosting
 if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = 

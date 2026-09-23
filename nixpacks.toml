@@ -10,4 +10,4 @@ cmds = ["npm ci --include=dev"]
 cmds = ["npx prisma generate", "npm run build"]
 
 [start]
-cmd = "npx tsx src/server/index.ts"
+cmd = "npm run start"
