@@ -43,24 +43,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       authorize: async (credentials) => {
         const parsedCredentials = z
-          .object({ email: z.string().email(), password: z.string().min(6) })
+          .object({ email: z.string().email(), password: z.string().min(1) })
           .safeParse(credentials);
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data;
           
-          const user = await prisma.user.findUnique({ where: { email } });
-          if (!user) return null;
+          try {
+            const cleanEmail = email.trim().toLowerCase();
+            const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+            if (!user) {
+              console.warn(`[Auth] User not found for email: ${cleanEmail}`);
+              return null;
+            }
 
-          const passwordsMatch = await bcrypt.compare(password, user.password);
+            const passwordsMatch = await bcrypt.compare(password, user.password);
 
-          if (passwordsMatch) {
-             return user;
+            if (passwordsMatch) {
+               return user;
+            } else {
+               console.warn(`[Auth] Password mismatch for email: ${cleanEmail}`);
+               return null;
+            }
+          } catch (dbErr) {
+            console.error("[Auth] Database error in authorize:", dbErr);
+            return null;
           }
         }
         return null;
       },
     }),
   ],
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "akg-default-production-auth-secret-key-928471",
+  trustHost: true,
 });

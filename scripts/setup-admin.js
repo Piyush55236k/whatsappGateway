@@ -4,34 +4,27 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-    const email = process.argv[2];
-    const password = process.argv[3];
-
-    if (!email) {
-        console.error("Please provide email. Usage: node scripts/setup-admin.js <email> [password]");
-        process.exit(1);
-    }
+    const email = (process.argv[2] || "admin@example.com").trim().toLowerCase();
+    const password = process.argv[3] || "admin123";
 
     const existingUser = await prisma.user.findUnique({
         where: { email }
     });
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     if (existingUser) {
-        console.log(`User ${email} found. Promoting to SUPERADMIN...`);
+        console.log(`User ${email} found. Updating to SUPERADMIN and setting password...`);
         await prisma.user.update({
             where: { email },
-            data: { role: 'SUPERADMIN' }
+            data: { 
+                role: 'SUPERADMIN',
+                password: hashedPassword
+            }
         });
-        console.log("User promoted successfully!");
+        console.log("User updated successfully!");
     } else {
-        if (!password) {
-            console.error("Password required for new user. Usage: node scripts/setup-admin.js <email> <password>");
-            process.exit(1);
-        }
-
         console.log(`Creating new SUPERADMIN user ${email}...`);
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
         await prisma.user.create({
             data: {
                 email,

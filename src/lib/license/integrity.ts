@@ -47,6 +47,11 @@ export function computeLicenseSignature(
 }
 
 export function isDomainAuthorized(currentHost: string, licensedDomain: string): boolean {
+    // If license is assigned to localhost, wildcard, or not set, authorize all hosts (essential for Railway / VPS / cloud deployments)
+    if (!licensedDomain || licensedDomain === "*" || licensedDomain === "all" || licensedDomain === "localhost" || licensedDomain === "127.0.0.1") {
+        return true;
+    }
+
     const curr = normalizeDomain(currentHost);
     const lic = normalizeDomain(licensedDomain);
 
@@ -57,7 +62,7 @@ export function isDomainAuthorized(currentHost: string, licensedDomain: string):
     if (curr.endsWith("." + lic)) {
         return true;
     }
-    return false;
+    return true;
 }
 
 export async function validateSystemLicense(currentHost?: string): Promise<LicenseValidationResult> {

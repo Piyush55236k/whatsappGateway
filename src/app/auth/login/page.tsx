@@ -46,18 +46,22 @@ function LoginForm() {
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email: values.email,
+        email: values.email.trim().toLowerCase(),
         password: values.password,
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid email or password");
+        } else {
+          setError(result.error);
+        }
       } else {
         window.location.href = callbackUrl;
         router.refresh();
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      setError(err?.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }

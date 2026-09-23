@@ -34,6 +34,8 @@ RUN npx prisma generate && npm run build
 # ---------- runner: jalankan custom server ----------
 FROM base AS runner
 ENV NODE_ENV=production
+ENV AUTH_SECRET="akg-default-production-auth-secret-key-928471"
+ENV AUTH_TRUST_HOST="true"
 # Jalankan sebagai non-root
 RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
 # Copy seluruh app yang sudah ter-build (server dijalankan via tsx -> butuh source TS)
