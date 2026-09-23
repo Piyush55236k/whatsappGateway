@@ -13,6 +13,11 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Redirect root / directly to /auth/login
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/auth/login', req.url));
+  }
+
   return NextResponse.next();
 }
 
