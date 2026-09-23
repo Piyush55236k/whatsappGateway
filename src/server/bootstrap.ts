@@ -40,19 +40,34 @@ loadEnvFile(".env");
 
 // Fallback DATABASE_URL untuk Railway / Render / cloud hosting
 if (!process.env.DATABASE_URL) {
-    if (process.env.MYSQL_URL) {
-        process.env.DATABASE_URL = process.env.MYSQL_URL;
-    } else if (process.env.JAWSDB_URL) {
-        process.env.DATABASE_URL = process.env.JAWSDB_URL;
-    } else if (process.env.CLEARDB_DATABASE_URL) {
-        process.env.DATABASE_URL = process.env.CLEARDB_DATABASE_URL;
-    } else if (process.env.MYSQLHOST && process.env.MYSQLUSER) {
+    process.env.DATABASE_URL = 
+        process.env.MYSQL_URL ||
+        process.env.MYSQL_PRIVATE_URL ||
+        process.env.DATABASE_PRIVATE_URL ||
+        process.env.MYSQL_PUBLIC_URL ||
+        process.env.DATABASE_PUBLIC_URL ||
+        process.env.JAWSDB_URL ||
+        process.env.CLEARDB_DATABASE_URL;
+
+    if (!process.env.DATABASE_URL && process.env.MYSQLHOST && process.env.MYSQLUSER) {
         const user = encodeURIComponent(process.env.MYSQLUSER);
         const pass = encodeURIComponent(process.env.MYSQLPASSWORD || "");
         const host = process.env.MYSQLHOST;
         const port = process.env.MYSQLPORT || "3306";
         const db = process.env.MYSQLDATABASE || "railway";
         process.env.DATABASE_URL = `mysql://${user}:${pass}@${host}:${port}/${db}`;
+    }
+}
+
+// Auto-detect public URL for Railway / Cloud
+if (!process.env.NEXTAUTH_URL && !process.env.AUTH_URL) {
+    const domain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+    if (domain) {
+        const fullUrl = `https://${domain}`;
+        process.env.NEXTAUTH_URL = fullUrl;
+        process.env.AUTH_URL = fullUrl;
+        process.env.BASE_URL = fullUrl;
+        process.env.NEXT_PUBLIC_APP_URL = fullUrl;
     }
 }
 
