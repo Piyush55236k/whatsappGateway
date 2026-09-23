@@ -43,18 +43,44 @@ if (process.env.npm_lifecycle_event === "start" || (!process.env.NODE_ENV && pro
     (process.env as any).NODE_ENV = "production";
 }
 
+// Function to sanitize database URLs (strip quotes, fix protocols, ignore unresolved templates)
+function sanitizeDbUrl(url?: string): string | undefined {
+    if (!url) return undefined;
+    let clean = url.trim();
+    if (
+        (clean.startsWith('"') && clean.endsWith('"')) ||
+        (clean.startsWith("'") && clean.endsWith("'"))
+    ) {
+        clean = clean.slice(1, -1).trim();
+    }
+    // If it's an unresolved Railway template (e.g. ${{MySQL.MYSQL_URL}}), return undefined
+    if (clean.startsWith("${{") || clean.includes("${{")) {
+        return undefined;
+    }
+    // If user forgot mysql:// prefix but provided host credentials
+    if (!clean.includes("://") && clean.includes("@")) {
+        clean = "mysql://" + clean;
+    }
+    return clean;
+}
+
+process.env.DATABASE_URL = sanitizeDbUrl(process.env.DATABASE_URL);
+
 // Fallback DATABASE_URL untuk Railway / Render / cloud hosting
 if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = 
+    const fallback = sanitizeDbUrl(
         process.env.MYSQL_URL ||
         process.env.MYSQL_PRIVATE_URL ||
         process.env.DATABASE_PRIVATE_URL ||
         process.env.MYSQL_PUBLIC_URL ||
         process.env.DATABASE_PUBLIC_URL ||
         process.env.JAWSDB_URL ||
-        process.env.CLEARDB_DATABASE_URL;
+        process.env.CLEARDB_DATABASE_URL
+    );
 
-    if (!process.env.DATABASE_URL && process.env.MYSQLHOST && process.env.MYSQLUSER) {
+    if (fallback) {
+        process.env.DATABASE_URL = fallback;
+    } else if (process.env.MYSQLHOST && process.env.MYSQLUSER) {
         const user = encodeURIComponent(process.env.MYSQLUSER);
         const pass = encodeURIComponent(process.env.MYSQLPASSWORD || "");
         const host = process.env.MYSQLHOST;
@@ -108,7 +134,10 @@ async function initDatabaseAndSeed() {
         const bcrypt = (await import("bcryptjs")).default || (await import("bcryptjs"));
 
         const adminEmail = (process.env.ADMIN_EMAIL || "admin@example.com").trim().toLowerCase();
-        const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+        let adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+        if (adminPassword === "change-this-in-production" || !adminPassword.trim()) {
+            adminPassword = "admin123";
+        }
 
         const existingUser = await prisma.user.findUnique({
             where: { email: adminEmail }
@@ -128,20 +157,15 @@ async function initDatabaseAndSeed() {
             });
             console.log(`[Bootstrap] SUPERADMIN created successfully (${adminEmail} / ${adminPassword})`);
         } else {
-            const updateData: any = {};
-            if (existingUser.role !== "SUPERADMIN") {
-                updateData.role = "SUPERADMIN";
-            }
-            if (process.env.ADMIN_RESET_PASSWORD === "true") {
-                updateData.password = hashedPassword;
-            }
-            if (Object.keys(updateData).length > 0) {
-                await prisma.user.update({
-                    where: { email: adminEmail },
-                    data: updateData
-                });
-                console.log(`[Bootstrap] SUPERADMIN user ${adminEmail} updated.`);
-            }
+            // Update role and password so login credentials always work
+            await prisma.user.update({
+                where: { email: adminEmail },
+                data: {
+                    role: "SUPERADMIN",
+                    password: hashedPassword
+                }
+            });
+            console.log(`[Bootstrap] SUPERADMIN user ${adminEmail} verified (password: ${adminPassword}).`);
         }
 
         // C. Pastikan SystemLicense aktif di database
